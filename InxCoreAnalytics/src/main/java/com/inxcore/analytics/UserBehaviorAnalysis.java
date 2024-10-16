@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -251,6 +253,13 @@ public class UserBehaviorAnalysis {
 
     public static void resetAnalysisData(Context context, AnalysisData analysisData) {
 
+//        AnalysisData analysisData = new AnalysisData();
+//        List<String> stringList = new ArrayList<>();
+//        stringList.add("1729072922565.dat");
+//        stringList.add("1729072926460.dat");
+//        analysisData.setFileName(stringList);
+//
+//        analysisData.setFileName(stringList);
         try {
             if (analysisData == null) {
                 return;
@@ -268,7 +277,6 @@ public class UserBehaviorAnalysis {
                 if (!TextUtils.isEmpty(name)) {
                     for (String tName : fileNameS) {
                         if (name.equals(tName)) {
-                            //删除这个文件
                             deleteDirWithFile(file);
                             break;
                         }
@@ -281,19 +289,15 @@ public class UserBehaviorAnalysis {
         }
     }
 
-    public static void deleteDirWithFile(File dir) {
-        if (dir == null || !dir.exists() || !dir.isDirectory()) return;
-        for (File file : dir.listFiles()) {
-            if (file.isFile()) file.delete(); // 删除所有文件
-            else if (file.isDirectory()) deleteDirWithFile(file); // 递规的方式删除文件夹
-        }
-        dir.delete();// 删除目录本身
+    private static void deleteDirWithFile(File dir) {
+        if (dir == null || !dir.exists()) return;
+        if (dir.isFile()) dir.delete();
     }
 
     public static boolean isFastUpLoad() {
         long time = System.currentTimeMillis();
         long timeD = time - mLastClickTime;
-        if (0 < timeD && timeD < 1000 * 65) {
+        if (0 < timeD && timeD < 1000 * 90) {
             return true;
         }
         mLastClickTime = time;
@@ -301,7 +305,7 @@ public class UserBehaviorAnalysis {
     }
 
 
-    public static String byDateFormat(long time) {
+    private static String byDateFormat(long time) {
         String strDateFormat = "yyyy-MM-dd HH:mm:ss";//设置日期格式
 
         SimpleDateFormat sdf = new SimpleDateFormat(strDateFormat);
@@ -311,11 +315,17 @@ public class UserBehaviorAnalysis {
 
     }
 
-    public static JSONObject getAnalysisData(Context context) {
+    public static AnalysisResult getAnalysisData(Context context) {
 
+        AnalysisResult analysisResult = new AnalysisResult();
+        if (isFastUpLoad()) {
+            analysisResult.setCode(0);
+            return analysisResult;
+        }
         try {
             JSONObject jsonObject = new JSONObject();
             AnalysisData analysisAll = getAnalysisAll(context);
+
             JSONArray jsonArray = new JSONArray(analysisAll.getData());
             JSONObject startObject = jsonArray.getJSONObject(0);
             JSONObject endObject = jsonArray.getJSONObject(jsonArray.length() - 1);
@@ -325,16 +335,21 @@ public class UserBehaviorAnalysis {
             jsonObject.put("end_time", byDateFormat(end_time));
             jsonObject.put("timestamp", System.currentTimeMillis());
             jsonObject.put("result", jsonArray);
-//            saveTestData(context, "all.txt", jsonObject.toString());
 
+            analysisResult.setAnalysis(analysisAll);
+            analysisResult.setJsonObject(jsonObject);
+            analysisResult.setCode(1);
+            saveTestData(context, "all.txt", jsonObject.toString());
+            return analysisResult;
         } catch (Exception e) {
+            analysisResult.setCode(0);
             e.printStackTrace();
         }
-        return null;
+        return analysisResult;
     }
 
 
-    public static AnalysisData getAnalysisAll(Context context) {
+    private static AnalysisData getAnalysisAll(Context context) {
 
 //        if (isFastUpLoad()) {
 //
@@ -350,10 +365,32 @@ public class UserBehaviorAnalysis {
             try {
                 AnalysisData analysisData = new AnalysisData();
                 List<String> fileNames = new ArrayList<>();
-                StringBuilder result = new StringBuilder();
-                result.append("[");
+                List<File> fileList = new ArrayList<>();
                 for (int i = 0; i < directory.listFiles().length; i++) {
                     File file = directory.listFiles()[i];
+                    if (!TextUtils.isEmpty(file.getName()) && file.getName().endsWith(USER_BEHAVIOR_ANALYSIS_SUFFIX)) {
+                        fileList.add(file);
+                    }
+                }
+                Collections.sort(fileList, new Comparator<File>() {
+                    public int compare(File o1, File o2) {
+
+                        try {
+                            long name1 = Long.parseLong(o1.getName().replace(USER_BEHAVIOR_ANALYSIS_SUFFIX, ""));
+                            long name2 = Long.parseLong(o2.getName().replace(USER_BEHAVIOR_ANALYSIS_SUFFIX, ""));
+                            return Long.compare(name1, name2);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        return 1;
+                    }
+                });
+
+
+                StringBuilder result = new StringBuilder();
+                result.append("[");
+                for (int i = 0; i < fileList.size(); i++) {
+                    File file = fileList.get(i);
                     String name = file.getName();
                     fileNames.add(name);
                     String text = getTextByPath(file.getAbsolutePath());
@@ -381,7 +418,7 @@ public class UserBehaviorAnalysis {
     }
 
 
-    public static String getTextByPath(String path) {
+    private static String getTextByPath(String path) {
         String reader = null;
         BufferedReader br = null;
         File f = new File(path);
@@ -400,7 +437,7 @@ public class UserBehaviorAnalysis {
     }
 
 
-    public static void saveTestData(Context context, String fileName, String content) {
+    private static void saveTestData(Context context, String fileName, String content) {
         try {
             File file = new File(context.getFilesDir(), fileName);
             if (file.exists()) {

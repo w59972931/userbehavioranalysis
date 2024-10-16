@@ -6,7 +6,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import cn.inxtech.userbehavioranalysis.databinding.ActivityMainBinding
-import com.inxcore.analytics.AnalysisData
 import com.inxcore.analytics.UserBehaviorAnalysis
 import com.inxcore.analytics.UserBehaviorAnalysisActivity
 import com.inxcore.analytics.UserBehaviorAnalysisElement
@@ -52,8 +51,10 @@ class MainActivity : Activity(), UserBehaviorAnalysisActivity {
         ) { _, _ ->
 //            startActivity(Intent(this, AnotherActivity::class.java))
 
-            UserBehaviorAnalysis.getAnalysisData(this)
-            Log.d("okhttps","===button2==click==")
+
+//            UserBehaviorAnalysis.resetAnalysisData(this,null);
+            var data = UserBehaviorAnalysis.getAnalysisData(this)
+            Log.d("okhttps", "============getAnalysisData=====" + data.code)
             true
         })
     }
