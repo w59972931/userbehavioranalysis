@@ -339,7 +339,7 @@ public class UserBehaviorAnalysis {
             analysisResult.setAnalysis(analysisAll);
             analysisResult.setJsonObject(jsonObject);
             analysisResult.setCode(1);
-            saveTestData(context, "all.txt", jsonObject.toString());
+//            saveTestData(context, "all.txt", jsonObject.toString());
             return analysisResult;
         } catch (Exception e) {
             analysisResult.setCode(0);
@@ -443,7 +443,6 @@ public class UserBehaviorAnalysis {
             if (file.exists()) {
                 file.delete();
             }
-
             OutputStream out = new FileOutputStream(file);
             out.write(content.getBytes());
             out.close();
