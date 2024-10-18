@@ -73,7 +73,13 @@ public class UserBehaviorAnalysis {
     private static final String USER_BEHAVIOR_ANALYSIS_SUFFIX = ".dat";
 
 
-    private static final int MAX_RECORD_SIZE = 50;
+    private static final int MAX_RECORD_SIZE = 10;
+
+    private static final int DOUBLE_RELOAD = 10;
+
+    private static final int LIMIT_FILES_SIZE = 20;
+
+
     public static long mLastClickTime;
     private static SharedPreferences sharedPreferences;
     private static SharedPreferences.Editor editor;
@@ -297,7 +303,7 @@ public class UserBehaviorAnalysis {
     public static boolean isFastUpLoad() {
         long time = System.currentTimeMillis();
         long timeD = time - mLastClickTime;
-        if (0 < timeD && timeD < 1000 * 90) {
+        if (0 < timeD && timeD < 1000 * DOUBLE_RELOAD) {
             return true;
         }
         mLastClickTime = time;
@@ -318,14 +324,37 @@ public class UserBehaviorAnalysis {
     public static AnalysisResult getAnalysisData(Context context) {
 
         AnalysisResult analysisResult = new AnalysisResult();
-        if (isFastUpLoad()) {
-            analysisResult.setCode(0);
-            return analysisResult;
+        AnalysisResult analysisLocalData = getAnalysisLocalData(context);
+
+        if (analysisLocalData.getCode() == 1) {
+            if (isFastUpLoad()) {
+                analysisResult.setCode(0);
+                return analysisResult;
+            }
         }
+        try {
+            saveTestData(context, "all.txt", analysisResult.getJsonObject().toString());
+        }catch (Exception e){
+            e.printStackTrace();
+
+        }
+
+        analysisResult = analysisLocalData;
+        return analysisResult;
+    }
+
+
+    public static AnalysisResult getAnalysisLocalData(Context context) {
+        AnalysisResult analysisResult = new AnalysisResult();
+
         try {
             JSONObject jsonObject = new JSONObject();
             AnalysisData analysisAll = getAnalysisAll(context);
 
+            if (TextUtils.isEmpty(analysisAll.getData()) || analysisAll.getData().length() < 20 || analysisAll.getFileName() == null || analysisAll.getFileName().isEmpty()) {
+                analysisResult.setCode(0);
+                return analysisResult;
+            }
             JSONArray jsonArray = new JSONArray(analysisAll.getData());
             JSONObject startObject = jsonArray.getJSONObject(0);
             JSONObject endObject = jsonArray.getJSONObject(jsonArray.length() - 1);
@@ -339,7 +368,6 @@ public class UserBehaviorAnalysis {
             analysisResult.setAnalysis(analysisAll);
             analysisResult.setJsonObject(jsonObject);
             analysisResult.setCode(1);
-//            saveTestData(context, "all.txt", jsonObject.toString());
             return analysisResult;
         } catch (Exception e) {
             analysisResult.setCode(0);
@@ -347,7 +375,6 @@ public class UserBehaviorAnalysis {
         }
         return analysisResult;
     }
-
 
     private static AnalysisData getAnalysisAll(Context context) {
 
@@ -397,7 +424,7 @@ public class UserBehaviorAnalysis {
                     String textByPath = text.substring(1, text.length() - 1);
                     result.append(textByPath);
                     result.append(",");
-                    if (i > 20) {
+                    if (i > LIMIT_FILES_SIZE) {
                         break;
                     }
                 }
@@ -448,7 +475,6 @@ public class UserBehaviorAnalysis {
             out.close();
         } catch (Exception e) {
             e.printStackTrace();
-
         }
     }
 }
