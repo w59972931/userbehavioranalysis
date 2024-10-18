@@ -9,6 +9,7 @@ import cn.inxtech.userbehavioranalysis.databinding.ActivityMainBinding
 import com.inxcore.analytics.UserBehaviorAnalysis
 import com.inxcore.analytics.UserBehaviorAnalysisActivity
 import com.inxcore.analytics.UserBehaviorAnalysisElement
+import kotlin.concurrent.thread
 
 class MainActivity : Activity(), UserBehaviorAnalysisActivity {
 
@@ -51,11 +52,44 @@ class MainActivity : Activity(), UserBehaviorAnalysisActivity {
         ) { _, _ ->
 //            startActivity(Intent(this, AnotherActivity::class.java))
 
+            object : Thread() {
+                override fun run() {
+                    super.run()
+                    var data = UserBehaviorAnalysis.getAnalysisData(this@MainActivity)
+                    Log.d(
+                        "okhttps",
+                        "=${data.code}====${Thread.currentThread().name}=======getAnalysisData=====" + data.analysis.fileName
+                    )
 
-//            UserBehaviorAnalysis.resetAnalysisData(this,null);
-            var data = UserBehaviorAnalysis.getAnalysisData(this)
-            Log.d("okhttps", "============getAnalysisData=====" + data.code)
+                }
+            }.start()
+
+//            thread {
+//                var data = UserBehaviorAnalysis.getAnalysisData(this)
+//                Log.d(
+//                    "okhttps",
+//                    "=${data.code}====${Thread.currentThread().name}=======getAnalysisData=====" + data.analysis.fileName
+//                )
+//            }.start()
+
             true
         })
+
+        binding.btn3.setOnClickListener {
+            thread {
+                var data = UserBehaviorAnalysis.getAnalysisData(this)
+                UserBehaviorAnalysis.resetAnalysisData(this, data.analysis);
+            }.start()
+
+            object : Thread() {
+                override fun run() {
+                    super.run()
+                    var data = UserBehaviorAnalysis.getAnalysisData(this@MainActivity)
+                    UserBehaviorAnalysis.resetAnalysisData(this@MainActivity, data.analysis);
+
+                }
+            }.start()
+
+        }
     }
 }

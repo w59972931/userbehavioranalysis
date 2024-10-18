@@ -75,7 +75,7 @@ public class UserBehaviorAnalysis {
 
     private static final int MAX_RECORD_SIZE = 10;
 
-    private static final int DOUBLE_RELOAD = 10;
+    private static final int DOUBLE_RELOAD = 90;
 
     private static final int LIMIT_FILES_SIZE = 20;
 
@@ -259,45 +259,52 @@ public class UserBehaviorAnalysis {
 
     public static void resetAnalysisData(Context context, AnalysisData analysisData) {
 
-//        AnalysisData analysisData = new AnalysisData();
-//        List<String> stringList = new ArrayList<>();
-//        stringList.add("1729072922565.dat");
-//        stringList.add("1729072926460.dat");
-//        analysisData.setFileName(stringList);
-//
-//        analysisData.setFileName(stringList);
-        try {
-            if (analysisData == null) {
-                return;
-            }
-            if (analysisData.getFileName() == null) {
-                return;
-            }
-            File directory = new File(context.getFilesDir(), USER_BEHAVIOR_ANALYSIS_DIR);
-            if (!directory.exists()) {
-                return;
-            }
-            List<String> fileNameS = analysisData.getFileName();
-            for (File file : directory.listFiles()) {
-                String name = file.getName();
-                if (!TextUtils.isEmpty(name)) {
-                    for (String tName : fileNameS) {
-                        if (name.equals(tName)) {
-                            deleteDirWithFile(file);
-                            break;
-                        }
-                    }
-                }
-
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (analysisData == null) {
+            return;
         }
+        if (analysisData.getFileName() == null) {
+            return;
+        }
+        File directory = new File(context.getFilesDir(), USER_BEHAVIOR_ANALYSIS_DIR);
+        if (!directory.exists()) {
+            return;
+        }
+        new Thread() {
+            @Override
+            public void run() {
+                super.run();
+                try {
+                    List<String> fileNameS = analysisData.getFileName();
+                    for (File file : directory.listFiles()) {
+                        String name = file.getName();
+                        if (!TextUtils.isEmpty(name)) {
+                            for (String tName : fileNameS) {
+                                if (name.equals(tName)) {
+                                    deleteDirWithFile(file);
+                                    break;
+                                }
+                            }
+                        }
+
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }.start();
     }
 
     private static void deleteDirWithFile(File dir) {
-        if (dir == null || !dir.exists()) return;
-        if (dir.isFile()) dir.delete();
+
+//        Log.d("deleteDirWithFile", "=====0====" + dir.getAbsolutePath());
+        if (dir == null || !dir.exists()) {
+            return;
+        }
+        if (dir.isFile()) {
+            Log.d("deleteDirWithFile", "=====1====" + dir.getAbsolutePath());
+            dir.delete();
+        }
+
     }
 
     public static boolean isFastUpLoad() {
@@ -334,7 +341,7 @@ public class UserBehaviorAnalysis {
         }
         try {
             saveTestData(context, "all.txt", analysisResult.getJsonObject().toString());
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
 
         }
