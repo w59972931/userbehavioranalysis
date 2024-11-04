@@ -2,13 +2,16 @@ package com.inxcore.analytics;
 
 import org.json.JSONObject;
 
-public class AnalysisResult {
+import java.io.Serializable;
+
+public class AnalysisResult implements Serializable {
 
 
     private int code;
 
     private JSONObject jsonObject;
     private AnalysisData analysis;
+    private String jsonEncryptData;
 
     public int getCode() {
         return code;
@@ -32,5 +35,13 @@ public class AnalysisResult {
 
     public void setAnalysis(AnalysisData analysis) {
         this.analysis = analysis;
+    }
+
+    public String getJsonEncryptData() {
+        return jsonEncryptData;
+    }
+
+    public void setJsonEncryptData(String jsonEncryptData) {
+        this.jsonEncryptData = jsonEncryptData;
     }
 }

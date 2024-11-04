@@ -353,8 +353,11 @@ public class UserBehaviorAnalysis {
         return analysisResult;
     }
 
-
     public static AnalysisResult getAnalysisLocalData(Context context) {
+        return getAnalysisLocalData(context,null,"","");
+    }
+
+    public static AnalysisResult getAnalysisLocalData(Context context,String aesKey,String uId,String gaid) {
         AnalysisResult analysisResult = new AnalysisResult();
 
         try {
@@ -374,7 +377,14 @@ public class UserBehaviorAnalysis {
             jsonObject.put("end_time", byDateFormat(end_time));
             jsonObject.put("timestamp", System.currentTimeMillis());
             jsonObject.put("result", jsonArray);
+            jsonObject.put("userId", uId);
+            jsonObject.put("gaid", gaid);
 
+            if(aesKey != null){
+                String gzipData = UserBehaviorAnalysisUtils.gzipCompress(jsonObject.toString());
+                String aseData = UserBehaviorAnalysisUtils.encryptAes(gzipData,aesKey);
+                analysisResult.setJsonEncryptData(aseData);
+            }
             analysisResult.setAnalysis(analysisAll);
             analysisResult.setJsonObject(jsonObject);
             analysisResult.setCode(1);
