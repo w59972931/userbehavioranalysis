@@ -6,15 +6,26 @@ import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Log;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
 import java.util.Set;
 
 public class UserBehaviorAnalysis {
@@ -59,7 +70,17 @@ public class UserBehaviorAnalysis {
     private static final String USER_BEHAVIOR_ANALYSIS_DATA_PARSE_TIMES = "parseTimes";
     private static final String USER_BEHAVIOR_ANALYSIS_DATA_DELETE_TIMES = "deleteTimes";
 
-    private static final int MAX_RECORD_SIZE = 50;
+    private static final String USER_BEHAVIOR_ANALYSIS_SUFFIX = ".dat";
+
+
+    private static final int MAX_RECORD_SIZE = 10;
+
+    private static final int DOUBLE_RELOAD = 90;
+
+    private static final int LIMIT_FILES_SIZE = 20;
+
+
+    public static long mLastClickTime;
     private static SharedPreferences sharedPreferences;
     private static SharedPreferences.Editor editor;
     private static int currentTheme;
@@ -148,14 +169,7 @@ public class UserBehaviorAnalysis {
     }
 
     public static void onInputChange(Context context, String pageName, String elementName, String startValue, String endValue, Long startTime, Long endTime, int parseTimes, int deleteTimes) {
-        addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_INPUT, USER_BEHAVIOR_ANALYSIS_TYPE_CHANGE, pageName, elementName, UserBehaviorAnalysisUtils.object(
-                USER_BEHAVIOR_ANALYSIS_DATA_START_VALUE, startValue,
-                USER_BEHAVIOR_ANALYSIS_DATA_END_VALUE, endValue,
-                USER_BEHAVIOR_ANALYSIS_DATA_START_TIME, startTime,
-                USER_BEHAVIOR_ANALYSIS_DATA_END_TIME, endTime,
-                USER_BEHAVIOR_ANALYSIS_DATA_PARSE_TIMES, parseTimes,
-                USER_BEHAVIOR_ANALYSIS_DATA_DELETE_TIMES, deleteTimes
-        ));
+        addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_INPUT, USER_BEHAVIOR_ANALYSIS_TYPE_CHANGE, pageName, elementName, UserBehaviorAnalysisUtils.object(USER_BEHAVIOR_ANALYSIS_DATA_START_VALUE, startValue, USER_BEHAVIOR_ANALYSIS_DATA_END_VALUE, endValue, USER_BEHAVIOR_ANALYSIS_DATA_START_TIME, startTime, USER_BEHAVIOR_ANALYSIS_DATA_END_TIME, endTime, USER_BEHAVIOR_ANALYSIS_DATA_PARSE_TIMES, parseTimes, USER_BEHAVIOR_ANALYSIS_DATA_DELETE_TIMES, deleteTimes));
     }
 
     public static void onSelectShow(Context context, String pageName, String elementName) {
@@ -179,7 +193,7 @@ public class UserBehaviorAnalysis {
         File[] files = retryDir.listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
-                return name.endsWith(".dat");
+                return name.endsWith(USER_BEHAVIOR_ANALYSIS_SUFFIX);
             }
         });
 
@@ -194,14 +208,13 @@ public class UserBehaviorAnalysis {
         }
     }
 
-
     private static void writeToFile(Context context, Long timestamp, Long startTime, Set<String> content) {
         try {
             File directory = new File(context.getFilesDir(), USER_BEHAVIOR_ANALYSIS_DIR);
             if (!directory.exists()) {
                 if (!directory.mkdirs()) return;
             }
-            File file = new File(directory, timestamp + ".dat");
+            File file = new File(directory, timestamp + USER_BEHAVIOR_ANALYSIS_SUFFIX);
             FileOutputStream fos = new FileOutputStream(file);
             fos.write(content.toString().getBytes());
             fos.close();
@@ -238,12 +251,240 @@ public class UserBehaviorAnalysis {
         } else {
             list.addAll(stringSet);
         }
-        list.add(UserBehaviorAnalysisUtils.object(USER_BEHAVIOR_ANALYSIS_LEVEL, level, USER_BEHAVIOR_ANALYSIS_TYPE, type, USER_BEHAVIOR_ANALYSIS_PAGE_NAME, pageName, USER_BEHAVIOR_ANALYSIS_ELEMENT_NAME, elementName, USER_BEHAVIOR_ANALYSIS_DATA, data).toString());
+        list.add(UserBehaviorAnalysisUtils.object(USER_BEHAVIOR_ANALYSIS_START_TIME, System.currentTimeMillis(), USER_BEHAVIOR_ANALYSIS_LEVEL, level, USER_BEHAVIOR_ANALYSIS_TYPE, type, USER_BEHAVIOR_ANALYSIS_PAGE_NAME, pageName, USER_BEHAVIOR_ANALYSIS_ELEMENT_NAME, elementName, USER_BEHAVIOR_ANALYSIS_DATA, data).toString());
         if (list.size() >= MAX_RECORD_SIZE) {
             writeToFile(context, System.currentTimeMillis(), sharedPreferences.getLong(USER_BEHAVIOR_ANALYSIS_START_TIME, 0L), list);
             editor.putStringSet(USER_BEHAVIOR_ANALYSIS_LIST, null).apply();
         } else {
             editor.putStringSet(USER_BEHAVIOR_ANALYSIS_LIST, list).apply();
+        }
+    }
+
+    public static void resetAnalysisData(Context context, AnalysisData analysisData) {
+
+        if (analysisData == null) {
+            return;
+        }
+        if (analysisData.getFileName() == null) {
+            return;
+        }
+        File directory = new File(context.getFilesDir(), USER_BEHAVIOR_ANALYSIS_DIR);
+        if (!directory.exists()) {
+            return;
+        }
+        new Thread() {
+            @Override
+            public void run() {
+                super.run();
+                try {
+                    List<String> fileNameS = analysisData.getFileName();
+                    for (File file : directory.listFiles()) {
+                        String name = file.getName();
+                        if (!TextUtils.isEmpty(name)) {
+                            for (String tName : fileNameS) {
+                                if (name.equals(tName)) {
+                                    deleteDirWithFile(file);
+                                    break;
+                                }
+                            }
+                        }
+
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }.start();
+    }
+
+    private static void deleteDirWithFile(File dir) {
+
+//        Log.d("deleteDirWithFile", "=====0====" + dir.getAbsolutePath());
+        if (dir == null || !dir.exists()) {
+            return;
+        }
+        if (dir.isFile()) {
+            Log.d("deleteDirWithFile", "=====1====" + dir.getAbsolutePath());
+            dir.delete();
+        }
+
+    }
+
+    public static boolean isFastUpLoad() {
+        long time = System.currentTimeMillis();
+        long timeD = time - mLastClickTime;
+        if (0 < timeD && timeD < 1000 * DOUBLE_RELOAD) {
+            return true;
+        }
+        mLastClickTime = time;
+        return false;
+    }
+
+
+    private static String byDateFormat(long time) {
+        String strDateFormat = "yyyy-MM-dd HH:mm:ss";//设置日期格式
+
+        SimpleDateFormat sdf = new SimpleDateFormat(strDateFormat);
+        Date date = new Date();
+        date.setTime(time);
+        return sdf.format(date);
+
+    }
+
+    public static AnalysisResult getAnalysisData(Context context) {
+
+        AnalysisResult analysisResult = new AnalysisResult();
+        AnalysisResult analysisLocalData = getAnalysisLocalData(context);
+
+        if (analysisLocalData.getCode() == 1) {
+            if (isFastUpLoad()) {
+                analysisResult.setCode(0);
+                return analysisResult;
+            }
+        }
+        try {
+            saveTestData(context, "all.txt", analysisResult.getJsonObject().toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+
+        }
+
+        analysisResult = analysisLocalData;
+        return analysisResult;
+    }
+
+
+    public static AnalysisResult getAnalysisLocalData(Context context) {
+        AnalysisResult analysisResult = new AnalysisResult();
+
+        try {
+            JSONObject jsonObject = new JSONObject();
+            AnalysisData analysisAll = getAnalysisAll(context);
+
+            if (TextUtils.isEmpty(analysisAll.getData()) || analysisAll.getData().length() < 20 || analysisAll.getFileName() == null || analysisAll.getFileName().isEmpty()) {
+                analysisResult.setCode(0);
+                return analysisResult;
+            }
+            JSONArray jsonArray = new JSONArray(analysisAll.getData());
+            JSONObject startObject = jsonArray.getJSONObject(0);
+            JSONObject endObject = jsonArray.getJSONObject(jsonArray.length() - 1);
+            long start_time = startObject.optLong(USER_BEHAVIOR_ANALYSIS_START_TIME);
+            long end_time = endObject.optLong(USER_BEHAVIOR_ANALYSIS_START_TIME);
+            jsonObject.put("start_time", byDateFormat(start_time));
+            jsonObject.put("end_time", byDateFormat(end_time));
+            jsonObject.put("timestamp", System.currentTimeMillis());
+            jsonObject.put("result", jsonArray);
+
+            analysisResult.setAnalysis(analysisAll);
+            analysisResult.setJsonObject(jsonObject);
+            analysisResult.setCode(1);
+            return analysisResult;
+        } catch (Exception e) {
+            analysisResult.setCode(0);
+            e.printStackTrace();
+        }
+        return analysisResult;
+    }
+
+    private static AnalysisData getAnalysisAll(Context context) {
+
+//        if (isFastUpLoad()) {
+//
+//            return null;
+//        }
+        File directory = new File(context.getFilesDir(), USER_BEHAVIOR_ANALYSIS_DIR);
+
+        if (!directory.exists()) {
+            //没有此文件
+            return null;
+        }
+        try {
+            try {
+                AnalysisData analysisData = new AnalysisData();
+                List<String> fileNames = new ArrayList<>();
+                List<File> fileList = new ArrayList<>();
+                for (int i = 0; i < directory.listFiles().length; i++) {
+                    File file = directory.listFiles()[i];
+                    if (!TextUtils.isEmpty(file.getName()) && file.getName().endsWith(USER_BEHAVIOR_ANALYSIS_SUFFIX)) {
+                        fileList.add(file);
+                    }
+                }
+                Collections.sort(fileList, new Comparator<File>() {
+                    public int compare(File o1, File o2) {
+
+                        try {
+                            long name1 = Long.parseLong(o1.getName().replace(USER_BEHAVIOR_ANALYSIS_SUFFIX, ""));
+                            long name2 = Long.parseLong(o2.getName().replace(USER_BEHAVIOR_ANALYSIS_SUFFIX, ""));
+                            return Long.compare(name1, name2);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        return 1;
+                    }
+                });
+
+
+                StringBuilder result = new StringBuilder();
+                result.append("[");
+                for (int i = 0; i < fileList.size(); i++) {
+                    File file = fileList.get(i);
+                    String name = file.getName();
+                    fileNames.add(name);
+                    String text = getTextByPath(file.getAbsolutePath());
+                    String textByPath = text.substring(1, text.length() - 1);
+                    result.append(textByPath);
+                    result.append(",");
+                    if (i > LIMIT_FILES_SIZE) {
+                        break;
+                    }
+                }
+                result = new StringBuilder(result.substring(0, result.length() - 1));
+                result.append("]");
+                analysisData.setFileName(fileNames);
+                analysisData.setData(result.toString());
+//                saveTestData(context,"test.sss",result.toString());
+                return analysisData;
+            } catch (OutOfMemoryError e) {
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+
+    private static String getTextByPath(String path) {
+        String reader = null;
+        BufferedReader br = null;
+        File f = new File(path);
+        String result = "";
+        if (f.exists()) {
+            try {
+                br = new BufferedReader(new FileReader(f));
+                while ((reader = br.readLine()) != null) {
+                    result += reader;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
+
+
+    private static void saveTestData(Context context, String fileName, String content) {
+        try {
+            File file = new File(context.getFilesDir(), fileName);
+            if (file.exists()) {
+                file.delete();
+            }
+            OutputStream out = new FileOutputStream(file);
+            out.write(content.getBytes());
+            out.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }
