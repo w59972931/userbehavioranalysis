@@ -132,6 +132,9 @@ public class UserBehaviorAnalysis {
         addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_PAGE, USER_BEHAVIOR_ANALYSIS_TYPE_REFRESH, pageName);
     }
 
+    public static void onElementClick(Context context, String pageName, String elementName) {
+        addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_ELEMENT, USER_BEHAVIOR_ANALYSIS_TYPE_CLICK, pageName, elementName, UserBehaviorAnalysisUtils.object(USER_BEHAVIOR_ANALYSIS_DATA_X, 0F, USER_BEHAVIOR_ANALYSIS_DATA_Y, 0F));
+    }
     public static void onElementClick(Context context, String pageName, String elementName, float x, float y) {
         addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_ELEMENT, USER_BEHAVIOR_ANALYSIS_TYPE_CLICK, pageName, elementName, UserBehaviorAnalysisUtils.object(USER_BEHAVIOR_ANALYSIS_DATA_X, x, USER_BEHAVIOR_ANALYSIS_DATA_Y, y));
     }

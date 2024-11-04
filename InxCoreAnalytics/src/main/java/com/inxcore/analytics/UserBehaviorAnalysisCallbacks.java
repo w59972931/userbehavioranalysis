@@ -49,8 +49,11 @@ public class UserBehaviorAnalysisCallbacks implements Application.ActivityLifecy
             UserBehaviorAnalysisActivity analysisActivity = (UserBehaviorAnalysisActivity) activity;
             for (UserBehaviorAnalysisElement uba : analysisActivity.getElementList()) {
                 String elementName = uba.elementName;
-                EditText editText = uba.editText;
-                if (editText != null) {
+                if(uba.view == null){
+                    continue;
+                }
+                if(uba.view instanceof EditText){
+                    EditText editText = (EditText)uba.view;
                     View.OnFocusChangeListener listener = uba.focusChangeListener;
                     ActionMode.Callback callback = uba.callback;
                     editText.setOnFocusChangeListener((view, b) -> {
@@ -149,6 +152,7 @@ public class UserBehaviorAnalysisCallbacks implements Application.ActivityLifecy
                         return false;
                     }
                 });
+
             }
         }
         activity.getWindow().getDecorView().setOnTouchListener(new View.OnTouchListener() {
@@ -222,8 +226,11 @@ public class UserBehaviorAnalysisCallbacks implements Application.ActivityLifecy
         Log.d("onActivityDestroyed", activity.toString());
         if (activity instanceof UserBehaviorAnalysisActivity) {
             for (UserBehaviorAnalysisElement uba : ((UserBehaviorAnalysisActivity) activity).getElementList()) {
-                EditText editText = uba.editText;
-                if (editText != null) {
+                if(uba.view == null){
+                    continue;
+                }
+                if(uba.view instanceof EditText){
+                    EditText editText = (EditText)uba.view;
                     editText.setOnFocusChangeListener(null);
                     editText.setCustomSelectionActionModeCallback(null);
                 }
