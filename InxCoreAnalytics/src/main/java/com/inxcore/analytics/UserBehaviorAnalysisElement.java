@@ -6,7 +6,9 @@ import android.widget.EditText;
 
 import androidx.annotation.Nullable;
 
-public class UserBehaviorAnalysisElement {
+import java.io.Serializable;
+
+public class UserBehaviorAnalysisElement implements Serializable {
     public final String elementName;
     public final View view;
     public String beforeParseValue;

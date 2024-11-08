@@ -1,8 +1,9 @@
 package com.inxcore.analytics;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class AnalysisData {
+public class AnalysisData implements Serializable {
 
     private List<String> fileName;
     private String data;

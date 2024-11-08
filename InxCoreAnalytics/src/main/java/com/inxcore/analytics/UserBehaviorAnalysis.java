@@ -79,6 +79,8 @@ public class UserBehaviorAnalysis {
 
     private static final int LIMIT_FILES_SIZE = 20;
 
+    public static final int LIMIT_TOTAL_SIZE = 20;
+
 
     public static long mLastClickTime;
     private static SharedPreferences sharedPreferences;
@@ -155,6 +157,9 @@ public class UserBehaviorAnalysis {
 
     public static void onElementClick(Context context, String pageName, String elementName) {
         addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_ELEMENT, USER_BEHAVIOR_ANALYSIS_TYPE_CLICK, pageName, elementName, UserBehaviorAnalysisUtils.object(USER_BEHAVIOR_ANALYSIS_DATA_X, 0F, USER_BEHAVIOR_ANALYSIS_DATA_Y, 0F));
+    }
+    public static void onElementInput(Context context, String pageName,UserBehaviorAnalysisElement elementBean){
+        UserBehaviorAnalysisUtils.elementEvent(context,pageName,elementBean);
     }
     public static void onElementClick(Context context, String pageName, String elementName, float x, float y) {
         addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_ELEMENT, USER_BEHAVIOR_ANALYSIS_TYPE_CLICK, pageName, elementName, UserBehaviorAnalysisUtils.object(USER_BEHAVIOR_ANALYSIS_DATA_X, x, USER_BEHAVIOR_ANALYSIS_DATA_Y, y));
@@ -260,6 +265,16 @@ public class UserBehaviorAnalysis {
         }
     }
 
+    public static void forcedWriteToFile(Context context){
+        Set<String> list = new ArraySet<>();
+        Set<String> stringSet = sharedPreferences.getStringSet(USER_BEHAVIOR_ANALYSIS_LIST, null);
+        if(stringSet != null){
+            list.addAll(stringSet);
+            writeToFile(context, System.currentTimeMillis(), sharedPreferences.getLong(USER_BEHAVIOR_ANALYSIS_START_TIME, 0L), list);
+            editor.putStringSet(USER_BEHAVIOR_ANALYSIS_LIST, null).apply();
+        }
+    }
+
     public static void resetAnalysisData(Context context, AnalysisData analysisData) {
 
         if (analysisData == null) {
@@ -332,39 +347,68 @@ public class UserBehaviorAnalysis {
     }
 
     public static AnalysisResult getAnalysisData(Context context) {
+        return getAnalysisData(context,LIMIT_TOTAL_SIZE);
+    }
 
+    public static AnalysisResult getAnalysisData(Context context,int totalSize) {
+        return getAnalysisData(context,"","","",totalSize);
+    }
+
+    public static AnalysisResult getAnalysisData(Context context,String aesKey,String uId,String gaid) {
+        return getAnalysisData(context,aesKey,uId,gaid,LIMIT_TOTAL_SIZE);
+    }
+
+    public static AnalysisResult getAnalysisData(Context context,String aesKey,String uId,String gaid,boolean forcedUpload) {
+        if(forcedUpload){
+            return getAnalysisData(context,aesKey,uId,gaid,0);
+        }else{
+            return getAnalysisData(context,aesKey,uId,gaid,LIMIT_TOTAL_SIZE);
+        }
+    }
+
+    public static AnalysisResult getAnalysisData(Context context,String aesKey,String uId,String gaid,int totalSize) {
         AnalysisResult analysisResult = new AnalysisResult();
-        AnalysisResult analysisLocalData = getAnalysisLocalData(context);
+        AnalysisResult analysisLocalData = getAnalysisLocalData(context,aesKey,uId,gaid,totalSize);
 
-        if (analysisLocalData.getCode() == 1) {
+        //当totalSize < LIMIT_TOTAL_SIZE  强制上传数据
+        if (analysisLocalData.getCode() == 1 && totalSize >= LIMIT_TOTAL_SIZE) {
             if (isFastUpLoad()) {
                 analysisResult.setCode(0);
                 return analysisResult;
             }
         }
-        try {
-            saveTestData(context, "all.txt", analysisResult.getJsonObject().toString());
-        } catch (Exception e) {
-            e.printStackTrace();
 
-        }
+//        try {
+//            saveTestData(context, "all.txt", analysisResult.getJsonObject().toString());
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//
+//        }
 
         analysisResult = analysisLocalData;
         return analysisResult;
     }
 
-    public static AnalysisResult getAnalysisLocalData(Context context) {
-        return getAnalysisLocalData(context,null,"","");
-    }
-
-    public static AnalysisResult getAnalysisLocalData(Context context,String aesKey,String uId,String gaid) {
+    public static AnalysisResult getAnalysisLocalData(Context context,String aesKey,String uId,String gaid,int totalSize) {
         AnalysisResult analysisResult = new AnalysisResult();
 
         try {
             JSONObject jsonObject = new JSONObject();
+
+            int forcedTotal = LIMIT_TOTAL_SIZE;
+            if(totalSize < LIMIT_TOTAL_SIZE){
+                forcedTotal = 0;
+                forcedWriteToFile(context);
+            }
             AnalysisData analysisAll = getAnalysisAll(context);
 
-            if (TextUtils.isEmpty(analysisAll.getData()) || analysisAll.getData().length() < 20 || analysisAll.getFileName() == null || analysisAll.getFileName().isEmpty()) {
+            //默认设置小于20条不上传
+            if(analysisAll.getData().length() < forcedTotal){
+                analysisResult.setCode(0);
+                return analysisResult;
+            }
+
+            if (TextUtils.isEmpty(analysisAll.getData())  || analysisAll.getFileName() == null || analysisAll.getFileName().isEmpty()) {
                 analysisResult.setCode(0);
                 return analysisResult;
             }
