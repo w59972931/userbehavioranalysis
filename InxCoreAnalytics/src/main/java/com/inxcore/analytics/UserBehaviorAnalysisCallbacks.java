@@ -22,7 +22,9 @@ import android.widget.EditText;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class UserBehaviorAnalysisCallbacks implements Application.ActivityLifecycleCallbacks {
@@ -31,6 +33,7 @@ public class UserBehaviorAnalysisCallbacks implements Application.ActivityLifecy
     private boolean isAppInForeground = true;
     private static final Map<Activity, Boolean> showStatus = new HashMap<>();
     private static final Map<Activity, Boolean> hideStatus = new HashMap<>();
+    public static List<EditText> elementEdit = new ArrayList<>();
 
     @Override
     public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle bundle) {
@@ -51,6 +54,9 @@ public class UserBehaviorAnalysisCallbacks implements Application.ActivityLifecy
 
                 if(uba.view == null){
                     continue;
+                }
+                if(uba.view instanceof EditText){
+                    elementEdit.add((EditText)uba.view);
                 }
                 UserBehaviorAnalysisUtils.elementEvent(activity,pageName,uba);
             }
@@ -133,6 +139,7 @@ public class UserBehaviorAnalysisCallbacks implements Application.ActivityLifecy
                     EditText editText = (EditText)uba.view;
                     editText.setOnFocusChangeListener(null);
                     editText.setCustomSelectionActionModeCallback(null);
+                    elementEdit.remove(editText);
                 }
                 uba.view.setOnTouchListener(null);
 

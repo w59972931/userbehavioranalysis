@@ -20,6 +20,8 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.security.Key;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
 import javax.crypto.Cipher;
@@ -97,11 +99,12 @@ public class UserBehaviorAnalysisUtils {
         }
         try {
             String elementName = uba.elementName;
-            if(uba.view instanceof EditText){
-                EditText editText = (EditText)uba.view;
+            View view = uba.view;
+            if(view instanceof EditText){
+                EditText editText = (EditText)view;
                 View.OnFocusChangeListener listener = uba.focusChangeListener;
                 ActionMode.Callback callback = uba.callback;
-                editText.setOnFocusChangeListener((view, b) -> {
+                editText.setOnFocusChangeListener((eview, b) -> {
                     if (b) {
                         uba.startTime = System.currentTimeMillis();
                         uba.startValue = editText.getText().toString();
@@ -111,7 +114,7 @@ public class UserBehaviorAnalysisUtils {
                         UserBehaviorAnalysis.onInputChange(activity, pageName, elementName, uba.startValue, uba.endValue, uba.startTime, uba.endTime, uba.parseTimes, uba.deleteTimes);
                     }
                     if (listener != null) {
-                        listener.onFocusChange(view, b);
+                        listener.onFocusChange(eview, b);
                     }
                 });
                 editText.addTextChangedListener(new TextWatcher() {
@@ -182,7 +185,7 @@ public class UserBehaviorAnalysisUtils {
                     }
                 });
             }
-            View view = uba.view;
+
             View.OnTouchListener listener = uba.touchListener;
             view.setOnTouchListener(new View.OnTouchListener() {
                 @SuppressLint("ClickableViewAccessibility")
@@ -193,6 +196,13 @@ public class UserBehaviorAnalysisUtils {
                     }
                     if (listener != null) {
                         listener.onTouch(view, motionEvent);
+                    }
+                    if(!(view instanceof EditText)){
+                        for(EditText editText: UserBehaviorAnalysisCallbacks.elementEdit){
+                            if(editText.isFocusable()){
+                                editText.clearFocus();
+                            }
+                        }
                     }
                     return false;
                 }
