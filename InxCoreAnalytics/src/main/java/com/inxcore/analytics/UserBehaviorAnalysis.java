@@ -10,6 +10,8 @@ import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Log;
 
+import androidx.lifecycle.ProcessLifecycleOwner;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -37,9 +39,9 @@ public class UserBehaviorAnalysis {
     private static final String USER_BEHAVIOR_ANALYSIS_LEVEL_SYSTEM = "system";
     private static final String USER_BEHAVIOR_ANALYSIS_LEVEL_APPLICATION = "application";
     private static final String USER_BEHAVIOR_ANALYSIS_LEVEL_PAGE = "page";
-    private static final String USER_BEHAVIOR_ANALYSIS_LEVEL_ELEMENT = "element";
-    private static final String USER_BEHAVIOR_ANALYSIS_LEVEL_INPUT = "input";
-    private static final String USER_BEHAVIOR_ANALYSIS_LEVEL_SELECT = "select";
+    public static final String USER_BEHAVIOR_ANALYSIS_LEVEL_ELEMENT = "element";
+    public static final String USER_BEHAVIOR_ANALYSIS_LEVEL_INPUT = "input";
+    public static final String USER_BEHAVIOR_ANALYSIS_LEVEL_SELECT = "select";
     private static final String USER_BEHAVIOR_ANALYSIS_TYPE = "type";
     private static final String USER_BEHAVIOR_ANALYSIS_TYPE_PERFORMANCE = "performance";
     private static final String USER_BEHAVIOR_ANALYSIS_TYPE_THEME = "theme";
@@ -55,6 +57,7 @@ public class UserBehaviorAnalysis {
     private static final String USER_BEHAVIOR_ANALYSIS_TYPE_CHANGE = "change";
     private static final String USER_BEHAVIOR_ANALYSIS_TYPE_PICK = "pick";
     private static final String USER_BEHAVIOR_ANALYSIS_TYPE_CANCEL = "cancel";
+    private static final String USER_BEHAVIOR_ANALYSIS_TYPE_SUBMIT = "submit";
     private static final String USER_BEHAVIOR_ANALYSIS_PAGE_NAME = "pageName";
     private static final String USER_BEHAVIOR_ANALYSIS_ELEMENT_NAME = "elementName";
     private static final String USER_BEHAVIOR_ANALYSIS_DATA = "data";
@@ -65,6 +68,7 @@ public class UserBehaviorAnalysis {
     private static final String USER_BEHAVIOR_ANALYSIS_DATA_PARSE_TEXT = "parseText";
     private static final String USER_BEHAVIOR_ANALYSIS_DATA_START_VALUE = "startValue";
     private static final String USER_BEHAVIOR_ANALYSIS_DATA_END_VALUE = "endVALUE";
+    private static final String USER_BEHAVIOR_ANALYSIS_DATA_SELECTED_VALUE = "selectedValue";
     private static final String USER_BEHAVIOR_ANALYSIS_DATA_START_TIME = "startTime";
     private static final String USER_BEHAVIOR_ANALYSIS_DATA_END_TIME = "endTime";
     private static final String USER_BEHAVIOR_ANALYSIS_DATA_PARSE_TIMES = "parseTimes";
@@ -99,6 +103,8 @@ public class UserBehaviorAnalysis {
             onApplicationOpen(application);
             application.registerActivityLifecycleCallbacks(new UserBehaviorAnalysisCallbacks());
             Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> onApplicationCrash(application));
+
+            ProcessLifecycleOwner.get().getLifecycle().addObserver(new AnalysisAppLifecycleEvent(application));
         }
         currentTheme = application.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
     }
@@ -117,8 +123,8 @@ public class UserBehaviorAnalysis {
         addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_APPLICATION, USER_BEHAVIOR_ANALYSIS_TYPE_OPEN);
     }
 
-    public static void onApplicationExit(Context context) {
-        addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_APPLICATION, USER_BEHAVIOR_ANALYSIS_TYPE_EXIT);
+    public static void onApplicationExit(Context context, String pageName) {
+        addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_APPLICATION, USER_BEHAVIOR_ANALYSIS_TYPE_EXIT,pageName);
     }
 
     public static void onApplicationHide(Context context) {
@@ -134,7 +140,7 @@ public class UserBehaviorAnalysis {
     }
 
     public static void onPageOpen(Context context, String pageName) {
-        addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_PAGE, USER_BEHAVIOR_ANALYSIS_TYPE_EXIT, pageName);
+        addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_PAGE, USER_BEHAVIOR_ANALYSIS_TYPE_OPEN, pageName);
     }
 
     public static void onPageExit(Context context, String pageName) {
@@ -165,6 +171,10 @@ public class UserBehaviorAnalysis {
         addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_ELEMENT, USER_BEHAVIOR_ANALYSIS_TYPE_CLICK, pageName, elementName, UserBehaviorAnalysisUtils.object(USER_BEHAVIOR_ANALYSIS_DATA_X, x, USER_BEHAVIOR_ANALYSIS_DATA_Y, y));
     }
 
+    public static void onInputClick(Context context, String pageName, String elementName, float x, float y) {
+        addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_INPUT, USER_BEHAVIOR_ANALYSIS_TYPE_CLICK, pageName, elementName, UserBehaviorAnalysisUtils.object(USER_BEHAVIOR_ANALYSIS_DATA_X, x, USER_BEHAVIOR_ANALYSIS_DATA_Y, y));
+    }
+
     public static void onInputCopy(Context context, String pageName, String elementName, String value, String copyText) {
         addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_INPUT, USER_BEHAVIOR_ANALYSIS_TYPE_COPY, pageName, elementName, UserBehaviorAnalysisUtils.object(USER_BEHAVIOR_ANALYSIS_DATA_VALUE, value, USER_BEHAVIOR_ANALYSIS_DATA_COPY_TEXT, copyText));
     }
@@ -175,6 +185,10 @@ public class UserBehaviorAnalysis {
 
     public static void onInputChange(Context context, String pageName, String elementName, String startValue, String endValue, Long startTime, Long endTime, int parseTimes, int deleteTimes) {
         addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_INPUT, USER_BEHAVIOR_ANALYSIS_TYPE_CHANGE, pageName, elementName, UserBehaviorAnalysisUtils.object(USER_BEHAVIOR_ANALYSIS_DATA_START_VALUE, startValue, USER_BEHAVIOR_ANALYSIS_DATA_END_VALUE, endValue, USER_BEHAVIOR_ANALYSIS_DATA_START_TIME, startTime, USER_BEHAVIOR_ANALYSIS_DATA_END_TIME, endTime, USER_BEHAVIOR_ANALYSIS_DATA_PARSE_TIMES, parseTimes, USER_BEHAVIOR_ANALYSIS_DATA_DELETE_TIMES, deleteTimes));
+    }
+
+    public static void onSelectClick(Context context, String pageName, String elementName, float x, float y) {
+        addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_SELECT, USER_BEHAVIOR_ANALYSIS_TYPE_CLICK, pageName, elementName, UserBehaviorAnalysisUtils.object(USER_BEHAVIOR_ANALYSIS_DATA_X, x, USER_BEHAVIOR_ANALYSIS_DATA_Y, y));
     }
 
     public static void onSelectShow(Context context, String pageName, String elementName) {
@@ -191,6 +205,10 @@ public class UserBehaviorAnalysis {
 
     public static void onSelectCancel(Context context, String pageName, String elementName) {
         addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_SELECT, USER_BEHAVIOR_ANALYSIS_TYPE_CANCEL, pageName, elementName);
+    }
+
+    public static void onSelectSubmit(Context context, String pageName, String elementName,String selected) {
+        addRecord(context, USER_BEHAVIOR_ANALYSIS_LEVEL_SELECT, USER_BEHAVIOR_ANALYSIS_TYPE_SUBMIT, pageName, elementName,UserBehaviorAnalysisUtils.object(USER_BEHAVIOR_ANALYSIS_DATA_SELECTED_VALUE,selected));
     }
 
     private static void retry(Context context) {
@@ -275,6 +293,11 @@ public class UserBehaviorAnalysis {
         }
     }
 
+    /**
+     * 上传成功后删除指定数据
+     * @param context
+     * @param analysisData
+     */
     public static void resetAnalysisData(Context context, AnalysisData analysisData) {
 
         if (analysisData == null) {
@@ -302,6 +325,39 @@ public class UserBehaviorAnalysis {
                                     break;
                                 }
                             }
+                        }
+
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }.start();
+    }
+
+    /**
+     * 退出登录后清空数据
+     * @param context
+     */
+    public static void resetAnalysisData(Context context) {
+
+        if(editor != null){
+            editor.putStringSet(USER_BEHAVIOR_ANALYSIS_LIST, null).apply();
+        }
+        File directory = new File(context.getFilesDir(), USER_BEHAVIOR_ANALYSIS_DIR);
+        if (!directory.exists()) {
+            return;
+        }
+        new Thread() {
+            @Override
+            public void run() {
+                super.run();
+                try {
+                    for (File file : directory.listFiles()) {
+                        String name = file.getName();
+                        if (!TextUtils.isEmpty(name)) {
+                            deleteDirWithFile(file);
+                            break;
                         }
 
                     }
@@ -370,7 +426,7 @@ public class UserBehaviorAnalysis {
         AnalysisResult analysisResult = new AnalysisResult();
         AnalysisResult analysisLocalData = getAnalysisLocalData(context,aesKey,uId,gaid,totalSize);
 
-        //当totalSize < LIMIT_TOTAL_SIZE  强制上传数据
+        //当totalSize < LIMIT_TOTAL_SIZE  不检测时间差上传逻辑
         if (analysisLocalData.getCode() == 1 && totalSize >= LIMIT_TOTAL_SIZE) {
             if (isFastUpLoad()) {
                 analysisResult.setCode(0);
@@ -395,9 +451,11 @@ public class UserBehaviorAnalysis {
         try {
             JSONObject jsonObject = new JSONObject();
 
+            //判断是否强制上传
             int forcedTotal = LIMIT_TOTAL_SIZE;
             if(totalSize < LIMIT_TOTAL_SIZE){
                 forcedTotal = 0;
+                //强制上传
                 forcedWriteToFile(context);
             }
             AnalysisData analysisAll = getAnalysisAll(context);

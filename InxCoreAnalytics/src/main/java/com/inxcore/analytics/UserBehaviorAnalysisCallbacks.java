@@ -78,6 +78,7 @@ public class UserBehaviorAnalysisCallbacks implements Application.ActivityLifecy
         Log.d("onActivityStarted", activity.toString());
         showStatus.put(activity, true);
         show(activity);
+        activityStartedCount++;
     }
 
     @Override
@@ -92,10 +93,9 @@ public class UserBehaviorAnalysisCallbacks implements Application.ActivityLifecy
 
     private void show(Activity activity) {
         UserBehaviorAnalysis.onPageShow(activity, UserBehaviorAnalysisUtils.getPageName(activity));
-        if (!isAppInForeground) {
-            isAppInForeground = true;
-            UserBehaviorAnalysis.onApplicationShow(activity);
-        }
+//        if (activityStartedCount == 0) {
+//            UserBehaviorAnalysis.onApplicationShow(activity,UserBehaviorAnalysisUtils.getPageName(activity));
+//        }
     }
 
     @Override
@@ -108,6 +108,7 @@ public class UserBehaviorAnalysisCallbacks implements Application.ActivityLifecy
     @Override
     public void onActivityStopped(@NonNull Activity activity) {
         Log.d("onActivityStopped", activity.toString());
+        activityStartedCount--;
         if (Boolean.TRUE.equals(hideStatus.get(activity))) {
             hideStatus.put(activity, false);
         } else {
@@ -118,18 +119,18 @@ public class UserBehaviorAnalysisCallbacks implements Application.ActivityLifecy
     private void hide(Activity activity) {
         if (!activity.isFinishing()) {
             UserBehaviorAnalysis.onPageHide(activity, UserBehaviorAnalysisUtils.getPageName(activity));
-            new Handler(Looper.getMainLooper()).postDelayed(() -> new Thread(() -> {
-                if (activityStartedCount == 0) {
-                    isAppInForeground = false;
-                    UserBehaviorAnalysis.onApplicationHide(activity);
-                }
-            }).start(), 1000);
+//            new Handler(Looper.getMainLooper()).postDelayed(() -> new Thread(() -> {
+//                if (activityStartedCount == 0) {
+//                    UserBehaviorAnalysis.onApplicationHide(activity,UserBehaviorAnalysisUtils.getPageName(activity));
+//                }
+//            }).start(), 1000);
         }
     }
 
     @Override
     public void onActivityDestroyed(@NonNull Activity activity) {
         Log.d("onActivityDestroyed", activity.toString());
+        UserBehaviorAnalysis.onPageExit(activity, UserBehaviorAnalysisUtils.getPageName(activity));
         if (activity instanceof UserBehaviorAnalysisActivity) {
             for (UserBehaviorAnalysisElement uba : ((UserBehaviorAnalysisActivity) activity).getElementList()) {
                 if(uba.view == null){
@@ -146,9 +147,8 @@ public class UserBehaviorAnalysisCallbacks implements Application.ActivityLifecy
             }
         }
         activityCreatedCount--;
-        UserBehaviorAnalysis.onPageExit(activity, UserBehaviorAnalysisUtils.getPageName(activity));
         if (activityCreatedCount == 0) {
-            UserBehaviorAnalysis.onApplicationExit(activity);
+            UserBehaviorAnalysis.onApplicationExit(activity,UserBehaviorAnalysisUtils.getPageName(activity));
         }
     }
 

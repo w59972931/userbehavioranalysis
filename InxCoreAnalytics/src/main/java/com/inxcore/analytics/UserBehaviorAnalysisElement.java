@@ -17,6 +17,7 @@ public class UserBehaviorAnalysisElement implements Serializable {
     public long endTime;
     public String endValue;
     public int deleteTimes;
+    public final String levelType;
     public int parseTimes;
     @Nullable
     public final View.OnFocusChangeListener focusChangeListener;
@@ -31,6 +32,7 @@ public class UserBehaviorAnalysisElement implements Serializable {
         this.touchListener = touchListener;
         this.focusChangeListener = focusChangeListener;
         this.callback = callback;
+        this.levelType = null;
     }
 
     public UserBehaviorAnalysisElement(String elementName, View view, @Nullable View.OnTouchListener touchListener) {
@@ -39,6 +41,7 @@ public class UserBehaviorAnalysisElement implements Serializable {
         this.touchListener = touchListener;
         focusChangeListener = null;
         callback = null;
+        this.levelType = null;
     }
 
     public UserBehaviorAnalysisElement(String elementName, View view) {
@@ -47,5 +50,15 @@ public class UserBehaviorAnalysisElement implements Serializable {
         this.touchListener = null;
         this.focusChangeListener = null;
         this.callback = null;
+        this.levelType = null;
+    }
+
+    public UserBehaviorAnalysisElement(String elementName, View view,String levelType) {
+        this.elementName = elementName;
+        this.view = view;
+        this.touchListener = null;
+        this.focusChangeListener = null;
+        this.callback = null;
+        this.levelType = levelType;
     }
 }

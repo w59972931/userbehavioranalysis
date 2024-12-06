@@ -1,5 +1,9 @@
 package com.inxcore.analytics;
 
+import static com.inxcore.analytics.UserBehaviorAnalysis.USER_BEHAVIOR_ANALYSIS_LEVEL_ELEMENT;
+import static com.inxcore.analytics.UserBehaviorAnalysis.USER_BEHAVIOR_ANALYSIS_LEVEL_INPUT;
+import static com.inxcore.analytics.UserBehaviorAnalysis.USER_BEHAVIOR_ANALYSIS_LEVEL_SELECT;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ClipData;
@@ -99,6 +103,7 @@ public class UserBehaviorAnalysisUtils {
         }
         try {
             String elementName = uba.elementName;
+            View.OnTouchListener touchListener = uba.touchListener;
             View view = uba.view;
             if(view instanceof EditText){
                 EditText editText = (EditText)view;
@@ -111,7 +116,9 @@ public class UserBehaviorAnalysisUtils {
                     } else {
                         uba.endTime = System.currentTimeMillis();
                         uba.endValue = editText.getText().toString();
-                        UserBehaviorAnalysis.onInputChange(activity, pageName, elementName, uba.startValue, uba.endValue, uba.startTime, uba.endTime, uba.parseTimes, uba.deleteTimes);
+                        if(!uba.startValue.equals(uba.endValue)){
+                            UserBehaviorAnalysis.onInputChange(activity, pageName, elementName, uba.startValue, uba.endValue, uba.startTime, uba.endTime, uba.parseTimes, uba.deleteTimes);
+                        }
                     }
                     if (listener != null) {
                         listener.onFocusChange(eview, b);
@@ -186,20 +193,39 @@ public class UserBehaviorAnalysisUtils {
                 });
             }
 
-            View.OnTouchListener listener = uba.touchListener;
             view.setOnTouchListener(new View.OnTouchListener() {
                 @SuppressLint("ClickableViewAccessibility")
                 @Override
                 public boolean onTouch(View view, MotionEvent motionEvent) {
                     if (motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
-                        UserBehaviorAnalysis.onElementClick(activity, pageName, elementName, motionEvent.getX(), motionEvent.getY());
+                        if(uba.levelType != null){
+                            if(USER_BEHAVIOR_ANALYSIS_LEVEL_ELEMENT.equals(uba.levelType)){
+                                UserBehaviorAnalysis.onElementClick(activity, pageName, elementName, motionEvent.getX(), motionEvent.getY());
+                            }else if(USER_BEHAVIOR_ANALYSIS_LEVEL_SELECT.equals(uba.levelType)){
+                                UserBehaviorAnalysis.onSelectClick(activity, pageName, elementName, motionEvent.getX(), motionEvent.getY());
+                            }else if(USER_BEHAVIOR_ANALYSIS_LEVEL_INPUT.equals(uba.levelType)){
+                                UserBehaviorAnalysis.onInputClick(activity, pageName, elementName, motionEvent.getX(), motionEvent.getY());
+                            }
+                        }else{
+                            if(view instanceof EditText){
+                                UserBehaviorAnalysis.onInputClick(activity, pageName, elementName, motionEvent.getX(), motionEvent.getY());
+                            }else{
+                                UserBehaviorAnalysis.onElementClick(activity, pageName, elementName, motionEvent.getX(), motionEvent.getY());
+                            }
+                        }
                     }
-                    if (listener != null) {
-                        listener.onTouch(view, motionEvent);
+                    if (touchListener != null) {
+                        touchListener.onTouch(view, motionEvent);
                     }
-                    if(!(view instanceof EditText)){
+
+                    boolean isClick = false;
+                    if(view instanceof EditText){
+                        isClick = !view.isEnabled();
+                    }
+
+                    if(!(view instanceof EditText) || isClick){
                         for(EditText editText: UserBehaviorAnalysisCallbacks.elementEdit){
-                            if(editText.isFocusable()){
+                            if(editText.hasFocus()){
                                 editText.clearFocus();
                             }
                         }
