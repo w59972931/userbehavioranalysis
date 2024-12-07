@@ -6,7 +6,7 @@ plugins {
 
 publishing {
     publications {
-        create<MavenPublication>("release") {
+        register<MavenPublication>("release") {
             groupId = "com.github.w59972931"
             artifactId = "userbehavioranalysis"
             version = "1.0.5"
@@ -42,6 +42,11 @@ android {
     }
     kotlinOptions {
         jvmTarget = "18"
+    }
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
     }
 }
 
