@@ -1,6 +1,21 @@
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    id("maven-publish")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            groupId = "com.github.w59972931"
+            artifactId = "userbehavioranalysis"
+            version = "1.0.5"
+
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+    }
 }
 
 android {
@@ -41,4 +56,4 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 }
 
-apply(from = "maven_pub.gradle.kts")
+//apply(from = "maven_pub.gradle.kts")
