@@ -1,24 +1,6 @@
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.jetbrainsKotlinAndroid)
-    id("maven-publish")
-}
-
-group = "com.github.w59972931"
-version = "1.0.1"
-
-publishing {
-    publications {
-        register<MavenPublication>("release") {
-            groupId = "com.github.w59972931"
-            artifactId = "userbehavioranalysis"
-            version = "1.0.1"
-
-            afterEvaluate {
-                from(components["release"])
-            }
-        }
-    }
 }
 
 android {
@@ -28,7 +10,6 @@ android {
     defaultConfig {
         minSdk = 23
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -41,11 +22,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_18
+        targetCompatibility = JavaVersion.VERSION_18
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "18"
     }
 }
 
@@ -59,3 +40,5 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
+
+apply(from = "maven_pub.gradle.kts")
