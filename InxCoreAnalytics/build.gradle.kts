@@ -1,6 +1,24 @@
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    id("maven-publish")
+}
+
+group = "com.github.w59972931"
+version = "1.0.1"
+
+publishing {
+    publications {
+        register<MavenPublication>("release") {
+            groupId = "com.github.w59972931"
+            artifactId = "userbehavioranalysis"
+            version = "1.0.1"
+
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+    }
 }
 
 android {
