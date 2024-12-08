@@ -4,6 +4,7 @@ plugins {
     id("maven-publish")
 }
 
+
 publishing {
     publications {
         register<MavenPublication>("release") {
@@ -42,11 +43,6 @@ android {
     }
     kotlinOptions {
         jvmTarget = "18"
-    }
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-        }
     }
 }
 
