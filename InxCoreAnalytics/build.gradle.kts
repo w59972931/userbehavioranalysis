@@ -4,9 +4,6 @@ plugins {
     id("maven-publish")
 }
 
-group = "com.github.w59972931"
-version = "1.0.1"
-
 publishing {
     publications {
         register<MavenPublication>("release") {
